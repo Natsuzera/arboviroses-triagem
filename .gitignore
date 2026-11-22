@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.egg-info/
+.ipynb_checkpoints/
+
+# baixados pelo coletor e gerados pela indexação
+documentos/*.pdf
+chroma_arboviroses/
+
+# checkpointer em disco
+checkpoints.db
+checkpoints.db-shm
+checkpoints.db-wal
+
+# Configuração e credenciais locais
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+conversas/

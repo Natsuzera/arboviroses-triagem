@@ -1,0 +1,38 @@
+[project]
+name = "triagem-arboviroses"
+version = "0.1.0"
+description = "Assistente de triagem de dengue, chikungunya e zika com LangGraph e RAG agêntico."
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "langchain>=1.0",
+    "langgraph>=1.0",
+    "langgraph-checkpoint-sqlite>=3.0",
+    "langchain-mcp-adapters>=0.2,<0.3",
+    "mcp>=1.26,<2",
+    "mcp-server-time==0.6.2",
+    "langchain-google-genai>=3.0",
+    "langchain-chroma>=1.0",
+    "langchain-community>=0.4",
+    "langchain-text-splitters>=1.0",
+    "streamlit>=1.41,<2",
+    "filelock>=3",
+    "pdfplumber>=0.11",
+    "beautifulsoup4>=4.12",
+    "python-dotenv>=1.0",
+]
+
+[project.scripts]
+triagem = "triagem.app:main"
+
+[project.optional-dependencies]
+dev = ["ipykernel"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+triagem = ["skills/*/SKILL.md"]
