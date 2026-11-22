@@ -20,7 +20,10 @@ def arquivo(thread_id: str) -> Path:
 
 def mensagens(thread_id: str) -> list[dict]:
     caminho = arquivo(thread_id)
-    return json.loads(caminho.read_text(encoding="utf-8")) if caminho.exists() else []
+    try:
+        return json.loads(caminho.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return []
 
 
 def salvar(thread_id: str, historico: list[dict]) -> None:
@@ -31,6 +34,16 @@ def salvar(thread_id: str, historico: list[dict]) -> None:
     temporario.replace(caminho)
 
 
+def excluir(thread_id: str) -> None:
+    caminho = arquivo(thread_id)
+    with FileLock(caminho.with_suffix(".lock")):
+        banco = PROJECT_DIR / "checkpoints.db"
+        if banco.is_file():
+            with closing(sqlite3.connect(banco)) as conn:
+                SqliteSaver(conn).delete_thread(thread_id)
+        caminho.unlink(missing_ok=True)
+
+
 def importar_anteriores() -> None:
     banco = PROJECT_DIR / "checkpoints.db"
     if not banco.is_file():
@@ -39,7 +52,8 @@ def importar_anteriores() -> None:
         if not conn.execute("SELECT 1 FROM sqlite_master WHERE name='checkpoints'").fetchone():
             return
         saver = SqliteSaver(conn)
-        for (thread_id,) in conn.execute("SELECT DISTINCT thread_id FROM checkpoints WHERE checkpoint_ns=''"):
+        threads = conn.execute("SELECT DISTINCT thread_id FROM checkpoints WHERE checkpoint_ns=''").fetchall()
+        for (thread_id,) in threads:
             try:
                 caminho = arquivo(thread_id)
             except ValueError:
@@ -65,7 +79,11 @@ def listar() -> list[tuple[str, str]]:
     PASTA.mkdir(exist_ok=True)
     importar_anteriores()
     itens = []
-    for caminho in sorted(PASTA.glob("*.json"), key=lambda p: p.stat().st_mtime_ns, reverse=True):
+    for caminho in PASTA.glob("*.json"):
+        try:
+            atualizado = caminho.stat().st_mtime_ns
+        except FileNotFoundError:
+            continue
         titulo = next((m["texto"] for m in mensagens(caminho.stem) if m["role"] == "user"), "")
-        itens.append((caminho.stem, " ".join(titulo.split())[:60] or "Conversa"))
-    return itens
+        itens.append((atualizado, caminho.stem, " ".join(titulo.split())[:60] or "Conversa"))
+    return [(identificador, titulo) for _, identificador, titulo in sorted(itens, reverse=True)]

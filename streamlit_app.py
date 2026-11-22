@@ -1,6 +1,8 @@
 """Interface de triagem de arboviroses."""
 
 import asyncio
+from base64 import b64encode
+from pathlib import Path
 
 import streamlit as st
 from filelock import FileLock
@@ -26,31 +28,80 @@ def mostrar(mensagem):
                     st.write("Skills consultadas", mensagem["skills"])
 
 
-st.set_page_config(page_title="Triagem de arboviroses", page_icon="🩺")
-st.title("Triagem de arboviroses")
-st.write("Descreva seus sintomas ou tire uma dúvida sobre dengue, chikungunya ou zika.")
+def confirmar_exclusao(identificador, titulo):
+    st.write("**Excluir esta conversa?**")
+    st.text(titulo)
+    st.write("As mensagens e a memória desta conversa serão apagadas permanentemente.")
+    cancelar, confirmar = st.columns(2)
+    if cancelar.button("Cancelar", use_container_width=True):
+        st.session_state.pop("exclusao", None)
+        st.rerun()
+    if confirmar.button("Excluir", type="primary", use_container_width=True):
+        historico.excluir(identificador)
+        st.session_state.pop("exclusao", None)
+        st.session_state.config = configurar_conversa()
+        st.rerun()
+
+
+assets = Path(__file__).parent / "assets"
+icone = assets / "simbolo.png"
+st.set_page_config(page_title="Arbo · Triagem", page_icon=str(icone))
+st.html("<style>" + (assets / "interface.css").read_text() + "</style>")
+simbolo = b64encode(icone.read_bytes()).decode()
+st.sidebar.markdown(
+    f'<div class="identidade"><img alt="" src="data:image/png;base64,{simbolo}">Arbo</div>',
+    unsafe_allow_html=True,
+)
 conversas = historico.listar()
-if st.sidebar.button("Nova conversa") or "config" not in st.session_state:
+if st.sidebar.button("Nova conversa", icon=":material/add:", use_container_width=True) or "config" not in st.session_state:
     st.session_state.config = configurar_conversa()
+    st.session_state.pop("exclusao", None)
 
 if conversas:
-    st.sidebar.subheader("Conversas")
+    st.sidebar.subheader("Histórico")
 for identificador, titulo in conversas:
     ativa = identificador == st.session_state.config["configurable"]["thread_id"]
-    if st.sidebar.button(titulo, key=identificador, type="primary" if ativa else "secondary"):
+    if st.sidebar.button(titulo, key=identificador, use_container_width=True, type="primary" if ativa else "secondary"):
         st.session_state.config = configurar_conversa(identificador)
         if not ativa:
+            st.session_state.pop("exclusao", None)
             st.rerun()
 
 thread_id = st.session_state.config["configurable"]["thread_id"]
-for mensagem in historico.mensagens(thread_id):
+mensagens = historico.mensagens(thread_id)
+sugestao = None
+if mensagens:
+    if st.sidebar.button("Excluir conversa", icon=":material/delete_outline:"):
+        st.session_state.exclusao = thread_id
+    if st.session_state.get("exclusao") == thread_id:
+        with st.sidebar.container(border=True):
+            confirmar_exclusao(thread_id, dict(conversas).get(thread_id, "Conversa"))
+    st.html('<header class="cabecalho compacto"><h1>Triagem de arboviroses</h1></header>')
+else:
+    st.html('<header class="cabecalho"><h1>Triagem de arboviroses</h1>'
+            '<p>Descreva o que está sentindo ou tire uma dúvida sobre dengue, chikungunya e zika.</p></header>')
+    st.subheader("Por onde começar?")
+    opcoes = [
+        ("Relatar sintomas", ":material/stethoscope:", "Quero relatar meus sintomas. Por onde começo?"),
+        ("Comparar doenças", ":material/compare_arrows:", "Quais as diferenças entre dengue, chikungunya e zika?"),
+        ("Consultar manuais", ":material/menu_book:", "Quais são os manuais usados na triagem?"),
+    ]
+    for coluna, (rotulo, icone_botao, pergunta) in zip(st.columns(3), opcoes):
+        if coluna.button(rotulo, icon=icone_botao, use_container_width=True):
+            sugestao = pergunta
+
+for mensagem in mensagens:
     mostrar(mensagem)
 
-if texto := st.chat_input("Escreva sua mensagem", max_chars=MAX_CHARS):
+texto = st.chat_input("Escreva sua mensagem", max_chars=MAX_CHARS) or sugestao
+if texto:
     pergunta = {"role": "user", "texto": texto}
     mostrar(pergunta)
     with FileLock(historico.arquivo(thread_id).with_suffix(".lock")):
         turno = historico.mensagens(thread_id)
+        if mensagens and not turno:
+            st.session_state.config = configurar_conversa()
+            st.rerun()
         turno.append(pergunta)
         historico.salvar(thread_id, turno)
         try:

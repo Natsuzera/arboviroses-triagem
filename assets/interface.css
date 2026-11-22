@@ -1,0 +1,13 @@
+[data-testid="stSidebar"] {border-right: 1px solid color-mix(in srgb, currentColor 19%, transparent)}
+[data-testid="stSidebar"] button {text-align: left}
+[data-testid="stSidebar"] button p {overflow-wrap: anywhere}
+.identidade {display:flex; align-items:center; gap:.65rem; margin:.3rem 0 1.7rem; color:inherit; font:600 1.7rem Georgia,serif; letter-spacing:-.06em}
+.identidade img {width:39px;height:39px}
+.cabecalho {position:relative; isolation:isolate; overflow:hidden; background:#104d45; color:#fff; border-radius:20px; padding:clamp(1.5rem,5vw,3rem); margin-bottom:1rem}
+.cabecalho::after {content:""; position:absolute; z-index:-1; width:62%; height:160%; right:-20%; top:-15%; transform:rotate(-25deg); background:repeating-radial-gradient(ellipse at 95% 48%,transparent 0 16px,#78b3a54d 17px 18px,transparent 19px 27px); pointer-events:none}
+.cabecalho h1 {font:normal clamp(2rem,5vw,3.45rem)/1.05 Georgia,serif; letter-spacing:-.045em; color:inherit; padding:0; margin:0 0 .85rem; max-width:82%}
+.cabecalho p {font-size:1rem; color:#e3f1e7; margin:0; max-width:76%}
+.cabecalho.compacto {padding:1.3rem 1.6rem}
+.cabecalho.compacto h1 {font-size:1.8rem; margin:0}
+[data-testid="stChatMessage"] {border:1px solid color-mix(in srgb, currentColor 19%, transparent); border-radius:16px; padding:1rem}
+@media (max-width:600px) {.cabecalho h1,.cabecalho p {max-width:95%}}
